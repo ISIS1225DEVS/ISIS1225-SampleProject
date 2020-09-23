@@ -62,25 +62,25 @@ def newCatalog():
                'years': None}
 
     catalog['books'] = lt.newList('SINGLE_LINKED', compareBookIds)
-    catalog['bookIds'] = mp.newMap(200,
-                                   maptype='PROBING',
-                                   loadfactor=0.4,
+    catalog['bookIds'] = mp.newMap(10000,
+                                   maptype='CHAINING',
+                                   loadfactor=0.7,
                                    comparefunction=compareMapBookIds)
-    catalog['authors'] = mp.newMap(200,
-                                   maptype='PROBING',
-                                   loadfactor=0.4,
+    catalog['authors'] = mp.newMap(800,
+                                   maptype='CHAINING',
+                                   loadfactor=1.5,
                                    comparefunction=compareAuthorsByName)
-    catalog['tags'] = mp.newMap(1000,
-                                maptype='CHAINING',
-                                loadfactor=0.7,
+    catalog['tags'] = mp.newMap(34500,
+                                maptype='PROBING',
+                                loadfactor=0.5,
                                 comparefunction=compareTagNames)
-    catalog['tagIds'] = mp.newMap(1000,
+    catalog['tagIds'] = mp.newMap(34500,
                                   maptype='CHAINING',
-                                  loadfactor=0.7,
+                                  loadfactor=0.9,
                                   comparefunction=compareTagIds)
-    catalog['years'] = mp.newMap(500,
-                                 maptype='CHAINING',
-                                 loadfactor=0.7,
+    catalog['years'] = mp.newMap(40,
+                                 maptype='PROBING',
+                                 loadfactor=0.4,
                                  comparefunction=compareMapYear)
 
     return catalog
@@ -91,7 +91,10 @@ def newAuthor(name):
     Crea una nueva estructura para modelar los libros de un autor
     y su promedio de ratings
     """
-    author = {'name': "", "books": None,  "average_rating": 0}
+    author = {'name': "", 
+              "books": None,
+              "average": 0,  
+              "average_rating": 0}
     author['name'] = name
     author['books'] = lt.newList('SINGLE_LINKED', compareAuthorsByName)
     return author
@@ -136,17 +139,23 @@ def addBookYear(catalog, book):
     Los años se guardan en un Map, donde la llave es el año
     y el valor la lista de libros de ese año.
     """
-    years = catalog['years']
-    pubyear = book['original_publication_year']
-    pubyear = int(float(pubyear))
-    existyear = mp.contains(years, pubyear)
-    if existyear:
-        entry = mp.get(years, pubyear)
-        year = me.getValue(entry)
-    else:
-        year = newYear(pubyear)
-        mp.put(years, pubyear, year)
-    lt.addLast(year['books'], book)
+    try:
+        years = catalog['years']
+        if (book['original_publication_year'] != ''):
+            pubyear = book['original_publication_year']
+            pubyear = int(float(pubyear))
+        else:
+            pubyear = 2020
+        existyear = mp.contains(years, pubyear)
+        if existyear:
+            entry = mp.get(years, pubyear)
+            year = me.getValue(entry)
+        else:
+            year = newYear(pubyear)
+            mp.put(years, pubyear, year)
+        lt.addLast(year['books'], book)
+    except Exception:
+        return None
 
 
 def newYear(pubyear):
@@ -175,13 +184,10 @@ def addBookAuthor(catalog, authorname, book):
         author = newAuthor(authorname)
         mp.put(authors, authorname, author)
     lt.addLast(author['books'], book)
-
-    authavg = author['average_rating']
-    bookavg = book['average_rating']
-    if (authavg == 0.0):
-        author['average_rating'] = float(bookavg)
-    else:
-        author['average_rating'] = (authavg + float(bookavg)) / 2
+    author['average'] += float(book['average_rating'])
+    totbooks = lt.size(author['books'])
+    if (totbooks > 0):
+        author['average_rating'] = author['average'] / totbooks
 
 
 def addTag(catalog, tag):

@@ -69,7 +69,7 @@ def loadBooks(catalog, booksfile):
       autor, se crea una lista con sus libros
     """
     booksfile = cf.data_dir + booksfile
-    input_file = csv.DictReader(open(booksfile))
+    input_file = csv.DictReader(open(booksfile), delimiter=",")
     for book in input_file:
         model.addBook(catalog, book)
         authors = book['authors'].split(",")  # Se obtienen los autores
